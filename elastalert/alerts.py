@@ -2184,3 +2184,32 @@ class HiveAlerter(Alerter):
             'type': 'hivealerter',
             'hive_host': self.rule.get('hive_connection', {}).get('hive_host', '')
         }
+
+
+class FlockAlerter(Alerter):
+
+    required_options = set(['flock_endpoint'])
+
+    def __init__(self, rule):
+        super(FlockAlerter, self).__init__(rule)
+        self.type = 'flock'
+        self.flock_endpoint = self.rule.get('flock_endpoint')
+        self.timeout = self.rule.get('flock_timeout') or 10
+        self.payload = dict()
+
+    def alert(self, matches):
+        text = self.create_alert_body(matches)
+        self.payload["text"] = text
+        headers = {
+            "Content-Type": "application/json"
+        }
+        response = requests.post(self.flock_endpoint, data=json.dumps(self.payload), timeout=self.timeout, headers=headers)
+        if (response.status_code != 200):
+            raise EAException('Status code is {} with response {}'.format(response.status_code, response.text))
+
+    def get_info(self):
+
+        return {
+            'type': self.type,
+            'flock_endpoint': self.flock_endpoint
+        }
